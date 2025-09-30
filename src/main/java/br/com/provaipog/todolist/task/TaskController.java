@@ -31,7 +31,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/tarefas")
+@RequestMapping("/tasks")
 @Tag(name = "Tarefas", description = "API para gerenciamento de tarefas")
 public class TaskController {
     
@@ -50,13 +50,10 @@ public class TaskController {
             var idUser = request.getAttribute("idUser");
             taskModel.setIdUser((UUID) idUser);
             
-            // Validações de negócio
             if (taskModel.getDataPrevistaConclusao().isBefore(LocalDate.now())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("A data prevista de conclusão não pode ser anterior à data atual");
             }
-            
-            // Define valores padrão
             if (taskModel.getPrioridade() == null) {
                 taskModel.setPrioridade(Priority.BAIXA);
             }
@@ -78,9 +75,12 @@ public class TaskController {
         @ApiResponse(responseCode = "401", description = "Não autorizado")
     })
     public ResponseEntity<Page<TaskModel>> list(
-            @Parameter(description = "Filtro por nome (contém)") @RequestParam(required = false) String nome,
-            @Parameter(description = "Filtro por prioridade") @RequestParam(required = false) Priority prioridade,
-            @Parameter(description = "Filtro por situação") @RequestParam(required = false) Situation situacao,
+            @Parameter(description = "Filtro por nome (contém)") @RequestParam(required = false, name = "nome") String nome,
+            @RequestParam(required = false, name = "name") String name,
+            @Parameter(description = "Filtro por prioridade") @RequestParam(required = false, name = "prioridade") Priority prioridade,
+            @RequestParam(required = false, name = "priority") Priority priority,
+            @Parameter(description = "Filtro por situação") @RequestParam(required = false, name = "situacao") Situation situacao,
+            @RequestParam(required = false, name = "situation") Situation situation,
             @Parameter(description = "Número da página (inicia em 0)") @RequestParam(defaultValue = "0") int pagina,
             @Parameter(description = "Tamanho da página") @RequestParam(defaultValue = "10") int tamanho,
             @Parameter(description = "Campo para ordenação") @RequestParam(defaultValue = "nome") String ordenarPor,
@@ -88,12 +88,17 @@ public class TaskController {
             HttpServletRequest request) {
         
         var idUser = request.getAttribute("idUser");
+
+        // Coalesce dos aliases
+        String filtroNome = (nome != null && !nome.isBlank()) ? nome : name;
+        Priority filtroPrioridade = (prioridade != null) ? prioridade : priority;
+        Situation filtroSituacao = (situacao != null) ? situacao : situation;
         
         Sort sort = Sort.by(Sort.Direction.fromString(direcao), ordenarPor);
         Pageable pageable = PageRequest.of(pagina, tamanho, sort);
         
         Page<TaskModel> tasks = this.taskRepository.findByIdUserWithFilters(
-            (UUID) idUser, nome, prioridade, situacao, pageable);
+            (UUID) idUser, filtroNome, filtroPrioridade, filtroSituacao, pageable);
         
         return ResponseEntity.ok(tasks);
     }
@@ -138,7 +143,7 @@ public class TaskController {
             // Não permite alterar a situação diretamente
             if (taskModel.getSituacao() != null && !taskModel.getSituacao().equals(task.getSituacao())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("A situação não pode ser alterada diretamente. Use os endpoints específicos (/concluir ou /pendente)");
+                    .body("A situação não pode ser alterada diretamente. Use os endpoints específicos (/complete ou /pending)");
             }
 
             Utils.copyNonNullProperties(taskModel, task);
@@ -166,7 +171,7 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/concluir")
+    @PatchMapping("/{id}/complete")
     @Operation(summary = "Marcar tarefa como concluída", description = "Marca uma tarefa como concluída")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tarefa marcada como concluída"),
@@ -195,7 +200,7 @@ public class TaskController {
         return ResponseEntity.ok(taskUpdated);
     }
 
-    @PatchMapping("/{id}/pendente")
+    @PatchMapping("/{id}/pending")
     @Operation(summary = "Marcar tarefa como pendente", description = "Marca uma tarefa como pendente")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Tarefa marcada como pendente"),

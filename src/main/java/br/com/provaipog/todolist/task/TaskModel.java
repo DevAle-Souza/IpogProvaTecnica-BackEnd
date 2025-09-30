@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 @Data
 @Entity(name = "tb_tasks")
@@ -26,29 +27,35 @@ public class TaskModel {
     
     @NotBlank(message = "Nome é obrigatório")
     @Column(nullable = false, length = 100)
+    @JsonAlias({"name"})
     private String nome;
     
     @Column(length = 500)
+    @JsonAlias({"description"})
     private String descricao;
     
     @NotNull(message = "Prioridade é obrigatória")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @JsonAlias({"priority"})
     private Priority prioridade;
     
     @NotNull(message = "Situação é obrigatória")
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @JsonAlias({"situation"})
     private Situation situacao = Situation.ABERTA;
     
     @NotNull(message = "Data prevista de conclusão é obrigatória")
     @Column(nullable = false)
+    @JsonAlias({"expectedCompletionDate", "dueDate"})
     private LocalDate dataPrevistaConclusao;
     
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
+    @JsonAlias({"userId"})
     private UUID idUser;
     
     public void setNome(String nome) throws Exception {
