@@ -81,9 +81,9 @@ public class TaskController {
             @RequestParam(required = false, name = "priority") Priority priority,
             @Parameter(description = "Filtro por situação") @RequestParam(required = false, name = "situacao") Situation situacao,
             @RequestParam(required = false, name = "situation") Situation situation,
-            @Parameter(description = "Número da página (inicia em 0)") @RequestParam(defaultValue = "0") int pagina,
-            @Parameter(description = "Tamanho da página") @RequestParam(defaultValue = "10") int tamanho,
-            @Parameter(description = "Campo para ordenação") @RequestParam(defaultValue = "nome") String ordenarPor,
+            @Parameter(description = "Número da página (inicia em 0)") @RequestParam(defaultValue = "0", name = "page") int pagina,
+            @Parameter(description = "Tamanho da página") @RequestParam(defaultValue = "10", name = "size") int tamanho,
+            @Parameter(description = "Campo para ordenação") @RequestParam(defaultValue = "nome", name = "sort") String ordenarPor,
             @Parameter(description = "Direção da ordenação (ASC ou DESC)") @RequestParam(defaultValue = "ASC") String direcao,
             HttpServletRequest request) {
         
@@ -94,7 +94,34 @@ public class TaskController {
         Priority filtroPrioridade = (prioridade != null) ? prioridade : priority;
         Situation filtroSituacao = (situacao != null) ? situacao : situation;
         
-        Sort sort = Sort.by(Sort.Direction.fromString(direcao), ordenarPor);
+        // Processar parâmetro sort (formato: campo,direção)
+        String campoOrdenacao = ordenarPor;
+        String direcaoOrdenacao = direcao;
+        
+        if (ordenarPor != null && ordenarPor.contains(",")) {
+            String[] partes = ordenarPor.split(",");
+            campoOrdenacao = partes[0];
+            if (partes.length > 1) {
+                direcaoOrdenacao = partes[1];
+            }
+        }
+        
+        // Mapear campos em inglês para português
+        if ("name".equals(campoOrdenacao)) {
+            campoOrdenacao = "nome";
+        } else if ("description".equals(campoOrdenacao)) {
+            campoOrdenacao = "descricao";
+        } else if ("priority".equals(campoOrdenacao)) {
+            campoOrdenacao = "prioridade";
+        } else if ("situation".equals(campoOrdenacao)) {
+            campoOrdenacao = "situacao";
+        } else if ("expectedCompletionDate".equals(campoOrdenacao)) {
+            campoOrdenacao = "dataPrevistaConclusao";
+        } else if ("createdAt".equals(campoOrdenacao)) {
+            campoOrdenacao = "dataCriacao";
+        }
+        
+        Sort sort = Sort.by(Sort.Direction.fromString(direcaoOrdenacao), campoOrdenacao);
         Pageable pageable = PageRequest.of(pagina, tamanho, sort);
         
         Page<TaskModel> tasks = this.taskRepository.findByIdUserWithFilters(
