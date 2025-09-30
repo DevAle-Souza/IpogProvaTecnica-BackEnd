@@ -1,5 +1,6 @@
 package br.com.provaipog.todolist.task;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -7,8 +8,12 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
@@ -18,25 +23,51 @@ public class TaskModel {
     @Id
     @GeneratedValue(generator = "UUID")
     private UUID id;
-    private String description;
-
-    @Column(length = 50)
-    private String title;
-    private LocalDateTime startAt;
-    private LocalDateTime endAt;
-    private String priority;
+    
+    @NotBlank(message = "Nome é obrigatório")
+    @Column(nullable = false, length = 100)
+    private String nome;
+    
+    @Column(length = 500)
+    private String descricao;
+    
+    @NotNull(message = "Prioridade é obrigatória")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Priority prioridade;
+    
+    @NotNull(message = "Situação é obrigatória")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Situation situacao = Situation.ABERTA;
+    
+    @NotNull(message = "Data prevista de conclusão é obrigatória")
+    @Column(nullable = false)
+    private LocalDate dataPrevistaConclusao;
+    
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime dataCriacao;
 
     private UUID idUser;
     
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    public void setTitle(String title) throws Exception {
-        if (title.length() > 50) {
-            throw new Exception("O campo title deve conter no máximo 50 caracteres");
+    public void setNome(String nome) throws Exception {
+        if (nome == null || nome.trim().isEmpty()) {
+            throw new Exception("O campo nome é obrigatório");
         }
-        this.title = title;
+        if (nome.length() > 100) {
+            throw new Exception("O campo nome deve conter no máximo 100 caracteres");
+        }
+        this.nome = nome;
     }
     
-    
+    public void setDataPrevistaConclusao(LocalDate dataPrevistaConclusao) throws Exception {
+        if (dataPrevistaConclusao == null) {
+            throw new Exception("A data prevista de conclusão é obrigatória");
+        }
+        if (dataPrevistaConclusao.isBefore(LocalDate.now())) {
+            throw new Exception("A data prevista de conclusão não pode ser anterior à data atual");
+        }
+        this.dataPrevistaConclusao = dataPrevistaConclusao;
+    }
 }
